@@ -1,0 +1,7 @@
+# PyInstaller 构建产物
+build/
+dist/
+*.spec
+
+# 本地运行时状态与快照
+.icon_arranger_state.json

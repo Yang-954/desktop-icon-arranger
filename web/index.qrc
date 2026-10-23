@@ -1,0 +1,7 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+  <qresource prefix="/">
+    <file alias="index.html">index.html</file>
+    <file alias="qwebchannel.js">qwebchannel.js</file>
+  </qresource>
+</RCC>
