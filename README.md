@@ -1,5 +1,7 @@
 # 桌面图标排列器
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 **不改任何文件名、不移动任何文件** —— 只通过 Windows Shell 消息重新摆放桌面图标在屏幕上的位置，真实落地生效。
 
 ---
@@ -161,3 +163,9 @@ python desktop_icon_arranger.py --undo --depth 2
    - 每次应用前均会自动捕获当前桌面所有图标坐标并压入历史栈（最多保留 20 份），任何时刻均可轻松撤销还原。
 3. **环境隔离自适应**：
    - 内置 `ensure_interactive_desktop` 机制，自动处理 Windows 会话、终端、沙箱或后台进程所属桌面的附着，无论是在双击直接运行、CMD/PowerShell 还是 IDE 内嵌终端中，均可稳定定位桌面视图句柄。
+
+---
+
+## 许可
+
+[MIT](./LICENSE) — Copyright (c) 2026 凡尘相守 (Yang-954)
