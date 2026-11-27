@@ -1,0 +1,85 @@
+[package]
+name = "desktop-icon-arranger"
+version = "3.0.0"
+edition = "2024"
+description = "桌面图标排列器 —— Rust 版 (v3)"
+license = "MIT"
+default-run = "desktop-icon-arranger"
+build = "build.rs"
+
+# 两个独立的二进制:
+#   desktop-icon-arranger      —— GUI 子系统, 双击无控制台
+#   desktop-icon-arranger-cli  —— console 子系统, 命令行用
+#
+# `required-features = ["gui"]` 很关键:
+# 否则 `cargo build --release --no-default-features` (跑测试时常用) 会把 GUI 版
+# 覆盖成一个没有 GUI 的"桩" (0.1 MB, 只能打印一行错误信息)。
+# 加上之后, 无 gui 特性时**根本不构建这个 bin**, 磁盘上留下的仍是好的 GUI 版。
+[[bin]]
+name = "desktop-icon-arranger"
+path = "src/main.rs"
+required-features = ["gui"]
+
+[[bin]]
+name = "desktop-icon-arranger-cli"
+path = "src/bin/dia-cli.rs"
+
+[lib]
+name = "desktop_icon_arranger"
+path = "src/lib.rs"
+
+# ---- 核心引擎 (CLI 可独立使用, 不依赖 Tauri) ----
+[dependencies]
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_Common",
+    "Win32_UI_Controls",
+    "Win32_System_Threading",
+    "Win32_System_Memory",
+    "Win32_System_Registry",
+    "Win32_System_LibraryLoader",
+    "Win32_System_SystemInformation",
+    "Win32_System_Time",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_Com",
+    "Win32_System_Console",
+    "Win32_System_StationsAndDesktops",
+    "Win32_Graphics_Gdi",
+    "Win32_Storage_FileSystem",
+    "Win32_System_SystemServices",
+] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+base64 = "0.22"
+flate2 = "1"
+pinyin = "0.11"
+
+[dev-dependencies]
+pretty_assertions = "1"
+
+# ---- Tauri GUI (可选特性: 不开则只构建 CLI) ----
+[features]
+default = ["gui"]
+gui = ["dep:tauri", "dep:tauri-plugin-single-instance", "dep:tauri-build"]
+
+[dependencies.tauri]
+version = "2"
+optional = true
+features = []
+
+[dependencies.tauri-plugin-single-instance]
+version = "2"
+optional = true
+
+[build-dependencies]
+tauri-build = { version = "2", optional = true }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

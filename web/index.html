@@ -421,6 +421,69 @@
       font-weight: 500;
     }
 
+    /* ---- 排序规则说明卡片 (紧凑版: 默认摘要, 可展开详情) ---- */
+    .mode-hint {
+      margin-top: 10px;
+      padding: 9px 11px;
+      border-radius: 10px;
+      background: var(--glass-bg-2);
+      border: 1px solid var(--glass-border);
+      font-size: 11.5px;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+    .mode-hint-head {
+      display: flex; align-items: center; gap: 6px;
+      margin-bottom: 4px;
+    }
+    .mode-hint-icon { font-size: 13px; line-height: 1; }
+    .mode-hint-title {
+      font-size: 12px; font-weight: 600; color: var(--text);
+      letter-spacing: 0.01em; flex: 1 1 auto;
+    }
+    .mode-hint-toggle {
+      flex: 0 0 auto;
+      font-size: 10.5px; color: var(--text-faint);
+      cursor: pointer; user-select: none;
+      padding: 1px 5px; border-radius: 5px;
+      border: 1px solid transparent;
+      transition: all 140ms ease;
+    }
+    .mode-hint-toggle:hover { color: var(--accent); background: var(--glass-bg-3); }
+    .mode-hint-desc { margin: 0; }
+    .mode-hint-detail { display: none; }
+    .mode-hint.expanded .mode-hint-detail { display: block; }
+    .mode-hint-list {
+      margin: 7px 0 0; padding: 0; list-style: none;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .mode-hint-list li {
+      position: relative;
+      padding-left: 12px;
+    }
+    .mode-hint-list li::before {
+      content: '';
+      position: absolute; left: 2px; top: 6px;
+      width: 3px; height: 3px; border-radius: 50%;
+      background: var(--accent); opacity: 0.75;
+    }
+    .mode-hint-note {
+      display: flex; gap: 6px; align-items: flex-start;
+      margin-top: 8px; padding-top: 7px;
+      border-top: 1px dashed var(--glass-border);
+      font-size: 10.5px; color: var(--text-faint);
+    }
+    .mode-hint-note b { color: var(--text-muted); font-weight: 600; }
+    .mode-hint-note .note-icon { flex: 0 0 auto; }
+
+    /* 下拉菜单里每项的副标题 */
+    .mode-option .opt-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .mode-option .opt-sub {
+      font-size: 10.5px; color: var(--text-faint); font-weight: 400;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .mode-option.active .opt-sub, .mode-option:hover .opt-sub { color: inherit; opacity: 0.72; }
+
     .switch-row { display: flex; align-items: center; justify-content: space-between; }
     .switch {
       width: 36px; height: 20px; border-radius: 999px;
@@ -845,20 +908,52 @@
               </div>
               <div class="mode-dropdown-menu" id="mode-dropdown-menu">
                 <div class="mode-option active" data-mode="standard">
-                  <span>🌟 标准推荐 (四段分组)</span>
+                  <span class="opt-text">
+                    <span>🌟 标准推荐 (四段分组)</span>
+                    <span class="opt-sub">系统 → 软件 → 文件夹 → 文件</span>
+                  </span>
                 </div>
                 <div class="mode-option" data-mode="name">
-                  <span>🔤 自然拼音混排 (A → Z)</span>
+                  <span class="opt-text">
+                    <span>🔤 自然拼音混排 (A → Z)</span>
+                    <span class="opt-sub">中英文数字按名称统一排序</span>
+                  </span>
                 </div>
                 <div class="mode-option" data-mode="time_desc">
-                  <span>⏱️ 修改时间倒序 (最新在前)</span>
+                  <span class="opt-text">
+                    <span>⏱️ 修改时间倒序 (最新在前)</span>
+                    <span class="opt-sub">最近改过的排最前</span>
+                  </span>
                 </div>
                 <div class="mode-option" data-mode="time_asc">
-                  <span>⏳ 修改时间正序 (最早在前)</span>
+                  <span class="opt-text">
+                    <span>⏳ 修改时间正序 (最早在前)</span>
+                    <span class="opt-sub">最久没动的排最前</span>
+                  </span>
                 </div>
                 <div class="mode-option" data-mode="type">
-                  <span>🗂️ 详细分类聚合 (同类集中)</span>
+                  <span class="opt-text">
+                    <span>🗂️ 详细分类聚合 (同类集中)</span>
+                    <span class="opt-sub">按图标类型分六组</span>
+                  </span>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 排序规则说明 (紧凑卡片, 点击展开详情) -->
+          <div class="mode-hint" id="mode-hint">
+            <div class="mode-hint-head">
+              <span class="mode-hint-icon" id="mode-hint-icon">🌟</span>
+              <span class="mode-hint-title" id="mode-hint-title">标准推荐 · 四段分组</span>
+              <span class="mode-hint-toggle" id="mode-hint-toggle">详细 ▾</span>
+            </div>
+            <p class="mode-hint-desc" id="mode-hint-desc"></p>
+            <div class="mode-hint-detail" id="mode-hint-detail">
+              <ul class="mode-hint-list" id="mode-hint-list"></ul>
+              <div class="mode-hint-note">
+                <span class="note-icon">💡</span>
+                <span>「降序 Z → A」是把结果列表<b>整体翻转</b>，不是逐项倒排；系统图标始终固定在最上方，不参与排序。</span>
               </div>
             </div>
           </div>
@@ -1208,6 +1303,104 @@
       time_asc: '⏳ 最早优先',
       type: '🗂️ 详细分类'
     };
+
+    // ---- 排序规则说明 ----
+    //
+    // 说明文字必须与后端的实际排序逻辑一致 (src/sorting.rs 的 `plan()`),
+    // 不能凭印象写。逐条对应关系:
+    //   standard : 系统置顶 -> 软件 -> 文件夹 -> 文件; 软件/文件夹按拼音, 文件按时间倒序
+    //   name     : 系统置顶; 其余全部按 natural_sort_key
+    //   time_desc: 系统置顶; 其余按 (-mtime, 拼音)
+    //   time_asc : 系统置顶; 其余按 (mtime, 拼音)
+    //   type     : 系统置顶; 其余按 (类型序号, 拼音), 序号 = 软件1/文件夹2/文档3/影音4/压缩5/普通6
+    const MODE_HINTS = {
+      standard: {
+        icon: '🌟',
+        title: '标准推荐 · 四段分组',
+        desc: '按「系统 → 软件 → 文件夹 → 文件」四段依次排列，最常用的整理方式。',
+        points: [
+          '软件与文件夹按名称自然拼音排序',
+          '普通文件按修改时间由新到旧排列，同一时间的再按名称排',
+          '办公文档 / 图片影音 / 压缩包都归入「文件」这一段'
+        ]
+      },
+      name: {
+        icon: '🔤',
+        title: '自然拼音混排',
+        desc: '所有图标按名称统一排序，中英文数字混排也能各归其位。',
+        points: [
+          '中文按拼音字母顺序，如「安装」排在「备注」之前',
+          '英文按字母顺序，数字按数值大小，如 item2 排在 item10 之前',
+          '只按名称排，不看修改时间'
+        ]
+      },
+      time_desc: {
+        icon: '⏱️',
+        title: '修改时间倒序',
+        desc: '最近修改过的排在最前面，适合找出刚下载、刚改过的文件。',
+        points: [
+          '按文件最后修改时间从新到旧排序',
+          '修改时间相同的，按名称自然拼音排列',
+          '没有修改时间的（系统图标等）固定置顶'
+        ]
+      },
+      time_asc: {
+        icon: '⏳',
+        title: '修改时间正序',
+        desc: '最久没动过的排在最前面，适合做归档清理。',
+        points: [
+          '按文件最后修改时间从旧到新排序',
+          '修改时间相同的，按名称自然拼音排列',
+          '没有修改时间的（系统图标等）固定置顶'
+        ]
+      },
+      type: {
+        icon: '🗂️',
+        title: '详细分类聚合',
+        desc: '按图标类型分成六组，同类集中在一块。',
+        points: [
+          '分组顺序：软件 → 文件夹 → 办公文档 → 图片影音 → 压缩包 → 普通文件',
+          '同一分组内部按名称自然拼音排列',
+          '系统图标固定置顶'
+        ]
+      }
+    };
+
+    /** 更新排序规则说明卡片。 */
+    function updateModeHint(mode) {
+      const hint = MODE_HINTS[mode];
+      const cardEl = document.getElementById('mode-hint');
+      const iconEl = document.getElementById('mode-hint-icon');
+      const titleEl = document.getElementById('mode-hint-title');
+      const descEl = document.getElementById('mode-hint-desc');
+      const listEl = document.getElementById('mode-hint-list');
+      if (!hint || !cardEl || !iconEl || !titleEl || !descEl || !listEl) return;
+      iconEl.textContent = hint.icon;
+      titleEl.textContent = hint.title;
+      descEl.textContent = hint.desc;
+      listEl.innerHTML = '';
+      for (const p of hint.points) {
+        const li = document.createElement('li');
+        li.textContent = p;
+        listEl.appendChild(li);
+      }
+      // 切换模式后收起详情, 避免左栏被撑高
+      cardEl.classList.remove('expanded');
+      const toggleEl = document.getElementById('mode-hint-toggle');
+      if (toggleEl) toggleEl.textContent = '详细 ▾';
+    }
+
+    // 展开/收起规则详情
+    (function initModeHintToggle() {
+      const cardEl = document.getElementById('mode-hint');
+      const toggleEl = document.getElementById('mode-hint-toggle');
+      if (!cardEl || !toggleEl) return;
+      toggleEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const open = cardEl.classList.toggle('expanded');
+        toggleEl.textContent = open ? '收起 ▴' : '详细 ▾';
+      });
+    })();
 
     const CAT_LABEL = {
       system: '系统图标',
@@ -1570,6 +1763,7 @@
         opt.classList.add('active');
         currentModeNameEl.textContent = MODE_NAMES[mode] || mode;
         document.getElementById('valueMode').textContent = MODE_NAMES[mode] || mode;
+        updateModeHint(mode);
         modeSelectBox.classList.remove('open');
         
         // 核心：立即向后端请求重新排序预览网格
@@ -2182,6 +2376,8 @@
     window.addEventListener('DOMContentLoaded', () => {
       renderInitialSkeleton();
       initBackendBridge();
+      // 初始化排序规则说明卡片 (显示当前模式的解释)
+      updateModeHint(currentMode);
 
       // 在横向优先(24列)模式下支持鼠标滚轮横向平滑滚动浏览
       const gridEl = document.getElementById('icon-grid');

@@ -1,7 +1,18 @@
-# PyInstaller 构建产物
-build/
-dist/
-*.spec
+# ---- Rust 构建产物 ----
+/target/
 
-# 本地运行时状态与快照
+# Tauri 自动生成的 schema
+/gen/
+
+# build.rs 生成的前端资源 (由 web/index.html + shim 注入而成)
+/web-frontend/
+
+# Tauri 打包产物 (NSIS 安装包)
+/src-tauri/target/
+
+# Python 工具的缓存 (tools/probe_gui.py 等诊断脚本)
+__pycache__/
+*.pyc
+
+# 运行时快照 (撤销历史)
 .icon_arranger_state.json
