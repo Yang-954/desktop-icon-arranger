@@ -252,13 +252,14 @@ impl Default for Cli {
 /// **exe 放到任何位置都能用** —— 状态文件不跟着 exe 走, 也不跟着"当前工作目录"走。
 ///
 /// 按优先级挑一个**当前进程确实可写**的目录:
-/// 1. `%APPDATA%\desktop-icon-arranger\`   —— 用户漫游配置 (首选, 跟随用户)
-/// 2. `%LOCALAPPDATA%\desktop-icon-arranger\` —— 本地配置 (漫游被禁时)
-/// 3. `%TEMP%\desktop-icon-arranger\`      —— 临时目录 (前两个都不可写时)
-/// 4. exe 同目录                              —— 最后的兜底
+/// 1. `%APPDATA%\<APP_IDENTIFIER>\`   —— 用户漫游配置 (首选, 跟随用户)
+/// 2. `%LOCALAPPDATA%\<APP_IDENTIFIER>\` —— 本地配置 (漫游被禁时)
+/// 3. `%TEMP%\<APP_IDENTIFIER>\`      —— 临时目录 (前两个都不可写时)
+/// 4. exe 同目录                         —— 最后的兜底
 ///
-/// 另外: 若目标不存在, 但 **exe 同目录**有旧版留下的同名文件 → **自动迁移过来**
-/// (一次性), 保证升级后历史不丢。
+/// 另外会自动**迁移**旧版本留下的位置记录 (一次性), 保证历史不丢:
+/// - exe 同目录的 `.icon_arranger_state.json` (Python 版时代的习惯)
+/// - `%APPDATA%\desktop-icon-arranger\` (v3.0 早期的目录名)
 ///
 /// ⚠️ 旧实现是"exe 旁边有就用, 否则用当前工作目录的相对路径", 有三个问题:
 /// - exe 放在 `C:\Program Files\` 等不可写目录 → 回退到 cwd → 双击时 cwd
@@ -270,16 +271,12 @@ impl Default for Cli {
 pub fn default_state_path() -> PathBuf {
     const FILE_NAME: &str = ".icon_arranger_state.json";
 
-    // 1) 挑一个可写的候选目录
+    // 1) 挑一个可写的候选目录 (目录名统一用 APP_IDENTIFIER, 与 WebView2 缓存目录同风格)
     let mut candidates: Vec<PathBuf> = Vec::new();
-    if let Some(d) = std::env::var_os("APPDATA") {
-        candidates.push(PathBuf::from(d).join("desktop-icon-arranger"));
-    }
-    if let Some(d) = std::env::var_os("LOCALAPPDATA") {
-        candidates.push(PathBuf::from(d).join("desktop-icon-arranger"));
-    }
-    if let Some(d) = std::env::var_os("TEMP") {
-        candidates.push(PathBuf::from(d).join("desktop-icon-arranger"));
+    for var in ["APPDATA", "LOCALAPPDATA", "TEMP"] {
+        if let Some(d) = std::env::var_os(var) {
+            candidates.push(PathBuf::from(d).join(crate::APP_IDENTIFIER));
+        }
     }
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
@@ -318,20 +315,43 @@ pub fn default_state_path() -> PathBuf {
         );
     }
 
-    // 2) 一次性迁移: exe 同目录的旧文件 -> 目标
+    // 2) 一次性迁移: 旧位置 -> 目标
+    //
+    //    迁移源可能有两处:
+    //    - exe 同目录 (Python 版时代的习惯)
+    //    - `%APPDATA%\desktop-icon-arranger\` (v3.0 早期的目录名)
+    //
+    //    注意: 上面选目标时可能刚创建了一个**空文件**, 所以判断条件是
+    //    "目标为空 或 目标不存在", 不能只看 exists()。
+    let mut legacy: Vec<PathBuf> = Vec::new();
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
-            let old = dir.join(FILE_NAME);
-            if old.exists() && old != target {
-                if let Some(parent) = target.parent() {
-                    let _ = std::fs::create_dir_all(parent);
-                }
-                match std::fs::copy(&old, &target) {
-                    Ok(_) => eprintln!("[state] 已把旧位置记录迁移到: {}", target.display()),
-                    Err(e) => eprintln!("[state] 迁移旧位置记录失败: {e}"),
-                }
-            }
+            legacy.push(dir.join(FILE_NAME));
         }
+    }
+    for var in ["APPDATA", "LOCALAPPDATA"] {
+        if let Some(d) = std::env::var_os(var) {
+            legacy.push(PathBuf::from(d).join("desktop-icon-arranger").join(FILE_NAME));
+        }
+    }
+
+    for old in legacy {
+        if old == target || !old.exists() {
+            continue;
+        }
+        // 源文件有内容才值得迁移
+        let Ok(meta) = std::fs::metadata(&old) else { continue };
+        if meta.len() == 0 {
+            continue;
+        }
+        if let Some(parent) = target.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        match std::fs::copy(&old, &target) {
+            Ok(_) => eprintln!("[state] 已把旧位置记录迁移到: {}", target.display()),
+            Err(e) => eprintln!("[state] 迁移旧位置记录失败: {e}"),
+        }
+        break;
     }
 
     target

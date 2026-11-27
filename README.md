@@ -194,15 +194,32 @@ cargo test --release --no-default-features
 
 | 写什么 | 写到哪 | 说明 |
 |---|---|---|
-| **WebView2 用户数据** | `%LOCALAPPDATA%\com.yang954.desktopiconarranger\EBWebView\` | Chromium 的 Cookie / GPU 缓存 / 字体缓存，约 **32 MB**。跟着**用户**走，不跟 exe 走 |
-| **位置记录（撤销历史）** | `%APPDATA%\desktop-icon-arranger\.icon_arranger_state.json` | 跟着**用户**走。换目录、换盘符运行同一个 exe，看到的都是同一份历史 |
+| **WebView2 用户数据** | `%LOCALAPPDATA%\com.desktopiconarranger.app\EBWebView\` | Chromium 的 Cookie / GPU 缓存 / 字体缓存，约 **11 MB**。跟着**用户**走，不跟 exe 走 |
+| **位置记录（撤销历史）** | `%APPDATA%\com.desktopiconarranger.app\.icon_arranger_state.json` | 跟着**用户**走。换目录、换盘符运行同一个 exe，看到的都是同一份历史 |
 | **UI 设置** | 不落盘 | 只在内存里 |
 
-位置记录的路径按可写性依次尝试：
+两处目录名都用同一个标识符 `com.desktopiconarranger.app`（即 `tauri.conf.json` 的 `identifier`），
+全局只有一套命名。位置记录的路径按可写性依次尝试：
 `%APPDATA%` → `%LOCALAPPDATA%` → `%TEMP%` → exe 同目录（兜底）。
 
-若 exe 同目录有旧版遗留的 `.icon_arranger_state.json`，**首次运行会自动迁移**到新位置，历史不丢。
+若旧版本留下过位置记录（exe 同目录，或早期目录名 `desktop-icon-arranger`），
+**首次运行会自动迁移**到新位置，历史不丢。
 CLI 也可以用 `--state <路径>` 显式指定。
+
+### 缓存会涨多大 / 会被自动清理吗？
+
+实测（连跑 5 次，每次启动 9 秒）：
+
+| | 大小 |
+|---|---|
+| 从零开始首次运行 | **10.7 MB** |
+| 第 2 ~ 5 次运行 | 每次只增 **0.01 MB**（10 KB） |
+
+**基本收敛，不会持续占用 C 盘。** 原因是这个应用只有一个固定页面，
+Chromium 能缓存的东西就那么多（`Default` 5.5 MB + `GrShaderCache` 4.7 MB + `ShaderCache` 0.5 MB）。
+
+Chromium 自身对磁盘缓存有配额上限，超过会自动淘汰旧条目；
+即使真涨到上限也不会无限增长。想彻底清掉，删掉那个 `EBWebView` 目录即可，下次运行会自动重建。
 
 ---
 

@@ -4,7 +4,53 @@
 //! (比如写到不可写目录 → 保存快照失败; 或跟着 cwd 跑 → 历史分裂)。
 
 use desktop_icon_arranger::cli::default_state_path;
+use desktop_icon_arranger::APP_IDENTIFIER;
 use std::path::PathBuf;
+
+/// `tauri.conf.json` 的 `identifier` 必须与 `APP_IDENTIFIER` 一致。
+///
+/// Tauri 用它决定 WebView2 用户数据目录; 本项目的运行时数据目录也用它。
+/// **两处各写一份必然分叉** —— 本项目已经吃过一次亏 (图标缓存的 key 两处各算一半,
+/// 结果缓存永远不命中、刷新丢图标)。这个断言就是防重蹈覆辙。
+#[test]
+fn identifier与配置一致() {
+    let conf = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tauri.conf.json"),
+    )
+    .expect("读不到 tauri.conf.json");
+
+    // 不引 serde_json 依赖, 直接做一次粗解析 (配置是我们自己写的, 格式稳定)
+    let found = conf
+        .lines()
+        .find(|l| l.contains("\"identifier\""))
+        .and_then(|l| l.split('"').nth(3))
+        .map(|s| s.to_string());
+
+    assert_eq!(
+        found.as_deref(),
+        Some(APP_IDENTIFIER),
+        "tauri.conf.json 的 identifier 与 APP_IDENTIFIER 不一致 —— 两处必须同步改"
+    );
+}
+
+/// identifier 必须符合 Tauri 的格式要求 (小写 ASCII / 数字 / 连字符, 点分段)。
+#[test]
+fn identifier格式合法() {
+    assert!(
+        !APP_IDENTIFIER.is_empty(),
+        "identifier 不能为空"
+    );
+    assert!(
+        APP_IDENTIFIER
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '.' || c == '-'),
+        "identifier 只能含小写字母/数字/点/连字符: {APP_IDENTIFIER}"
+    );
+    assert!(
+        APP_IDENTIFIER.contains('.'),
+        "identifier 应为反向域名格式 (至少含一个点): {APP_IDENTIFIER}"
+    );
+}
 
 /// 状态文件必须落在**用户配置目录**, 而不是 exe 旁边或当前工作目录。
 ///
@@ -21,7 +67,7 @@ fn 状态文件落在用户配置目录() {
 
     let is_candidate = |var: &str| {
         std::env::var_os(var)
-            .map(|d| p.starts_with(PathBuf::from(d).join("desktop-icon-arranger")))
+            .map(|d| p.starts_with(PathBuf::from(d).join(APP_IDENTIFIER)))
             .unwrap_or(false)
     };
     let in_user_dir = is_candidate("APPDATA")
