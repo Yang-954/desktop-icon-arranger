@@ -247,17 +247,94 @@ impl Default for Cli {
     }
 }
 
-/// 默认状态文件路径 (与 Python 版一致: 可执行文件同目录)。
+/// 默认状态文件路径 (撤销历史)。
+///
+/// **exe 放到任何位置都能用** —— 状态文件不跟着 exe 走, 也不跟着"当前工作目录"走。
+///
+/// 按优先级挑一个**当前进程确实可写**的目录:
+/// 1. `%APPDATA%\desktop-icon-arranger\`   —— 用户漫游配置 (首选, 跟随用户)
+/// 2. `%LOCALAPPDATA%\desktop-icon-arranger\` —— 本地配置 (漫游被禁时)
+/// 3. `%TEMP%\desktop-icon-arranger\`      —— 临时目录 (前两个都不可写时)
+/// 4. exe 同目录                              —— 最后的兜底
+///
+/// 另外: 若目标不存在, 但 **exe 同目录**有旧版留下的同名文件 → **自动迁移过来**
+/// (一次性), 保证升级后历史不丢。
+///
+/// ⚠️ 旧实现是"exe 旁边有就用, 否则用当前工作目录的相对路径", 有三个问题:
+/// - exe 放在 `C:\Program Files\` 等不可写目录 → 回退到 cwd → 双击时 cwd
+///   就是那个不可写目录 → **保存快照直接失败**
+/// - 从不同 cwd 运行同一个 exe → 状态文件落在不同地方 → **历史分裂**
+/// - 状态跟着"当前目录"跑, 行为反直觉
+///
+/// CLI 的 `--state` 参数仍可显式覆盖。
 pub fn default_state_path() -> PathBuf {
+    const FILE_NAME: &str = ".icon_arranger_state.json";
+
+    // 1) 挑一个可写的候选目录
+    let mut candidates: Vec<PathBuf> = Vec::new();
+    if let Some(d) = std::env::var_os("APPDATA") {
+        candidates.push(PathBuf::from(d).join("desktop-icon-arranger"));
+    }
+    if let Some(d) = std::env::var_os("LOCALAPPDATA") {
+        candidates.push(PathBuf::from(d).join("desktop-icon-arranger"));
+    }
+    if let Some(d) = std::env::var_os("TEMP") {
+        candidates.push(PathBuf::from(d).join("desktop-icon-arranger"));
+    }
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
-            let p = dir.join(".icon_arranger_state.json");
-            if p.exists() {
-                return p;
+            candidates.push(dir.to_path_buf());
+        }
+    }
+
+    let mut target = PathBuf::from(FILE_NAME);
+    let mut chosen = false;
+    for dir in &candidates {
+        let file = dir.join(FILE_NAME);
+        // 已存在 -> 直接用 (无需探测可写性)
+        if file.exists() {
+            target = file;
+            chosen = true;
+            break;
+        }
+        // 不存在 -> 试着建目录并写一个空文件, 确认真的可写
+        // (create_dir_all 成功不代表文件可写 —— 目录 ACL 可能只给了 RX)
+        if std::fs::create_dir_all(dir).is_ok() && std::fs::write(&file, b"").is_ok() {
+            target = file;
+            chosen = true;
+            break;
+        }
+    }
+    if !chosen {
+        // 所有用户目录都不可写 (极少见: 受限的企业环境) -> 退到 exe 同目录
+        if let Ok(exe) = std::env::current_exe() {
+            if let Some(dir) = exe.parent() {
+                target = dir.join(FILE_NAME);
+            }
+        }
+        eprintln!(
+            "[state] 用户目录均不可写, 位置记录将存到: {}",
+            target.display()
+        );
+    }
+
+    // 2) 一次性迁移: exe 同目录的旧文件 -> 目标
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            let old = dir.join(FILE_NAME);
+            if old.exists() && old != target {
+                if let Some(parent) = target.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                match std::fs::copy(&old, &target) {
+                    Ok(_) => eprintln!("[state] 已把旧位置记录迁移到: {}", target.display()),
+                    Err(e) => eprintln!("[state] 迁移旧位置记录失败: {e}"),
+                }
             }
         }
     }
-    PathBuf::from(".icon_arranger_state.json")
+
+    target
 }
 
 /// 解析命令行参数。

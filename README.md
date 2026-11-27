@@ -187,6 +187,25 @@ cargo test --release --no-default-features
 | 13 | Shell / GDI 图标 API 非线程安全 | 锁覆盖"取句柄 → 渲染 → 销毁"全程 |
 
 
+## 运行时写什么 / 写哪里
+
+**没有任何硬编码绝对路径** —— exe 放到任何盘符、任何目录（甚至 `C:\Program Files\`）
+都能直接跑，不依赖它旁边的任何文件。
+
+| 写什么 | 写到哪 | 说明 |
+|---|---|---|
+| **WebView2 用户数据** | `%LOCALAPPDATA%\com.yang954.desktopiconarranger\EBWebView\` | Chromium 的 Cookie / GPU 缓存 / 字体缓存，约 **32 MB**。跟着**用户**走，不跟 exe 走 |
+| **位置记录（撤销历史）** | `%APPDATA%\desktop-icon-arranger\.icon_arranger_state.json` | 跟着**用户**走。换目录、换盘符运行同一个 exe，看到的都是同一份历史 |
+| **UI 设置** | 不落盘 | 只在内存里 |
+
+位置记录的路径按可写性依次尝试：
+`%APPDATA%` → `%LOCALAPPDATA%` → `%TEMP%` → exe 同目录（兜底）。
+
+若 exe 同目录有旧版遗留的 `.icon_arranger_state.json`，**首次运行会自动迁移**到新位置，历史不丢。
+CLI 也可以用 `--state <路径>` 显式指定。
+
+---
+
 ## 已知限制
 
 - 暂不支持"自定义扫描目录" (前端的"添加自定义源"按钮还只显示用户/公共桌面)。
